@@ -1,5 +1,5 @@
 from django import forms
-from .models import Producto, Categoria
+from .models import Producto, Categoria, Proveedor
 
 
 class CategoriaForm(forms.ModelForm):
@@ -19,11 +19,29 @@ class CategoriaForm(forms.ModelForm):
             "descripcion": "Descripción",
         }
 
+class ProveedorForm(forms.ModelForm):
+    class Meta:
+        model = Proveedor
+        fields = ["nombre", "contacto", "telefono", "email", "direccion"]
+        widgets = {
+            "nombre": forms.TextInput(attrs={"class": "form-control", "placeholder": "Nombre del proveedor"}),
+            "contacto": forms.TextInput(attrs={"class": "form-control", "placeholder": "Persona de contacto"}),
+            "telefono": forms.TextInput(attrs={"class": "form-control", "placeholder": "Ej: +57 300 000 0000"}),
+            "email": forms.EmailInput(attrs={"class": "form-control", "placeholder": "correo@ejemplo.com"}),
+            "direccion": forms.Textarea(attrs={"class": "form-control", "rows": 2, "placeholder": "Dirección (opcional)"}),
+        }
 
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
-        fields = ["codigo_sku", "nombre", "descripcion", "stock", "categoria"]
+        fields = [
+            "codigo_sku",
+            "nombre",
+            "descripcion",
+            "stock",
+            "categoria",
+            "proveedor",  #  AÑADIDO
+        ]
         widgets = {
             "codigo_sku": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Ej: SKU-001"}
@@ -40,6 +58,9 @@ class ProductoForm(forms.ModelForm):
             "categoria": forms.Select(
                 attrs={"class": "form-select"}
             ),
+            "proveedor": forms.Select(   #  NUEVO
+                attrs={"class": "form-select"}
+            ),
         }
         labels = {
             "codigo_sku": "Código / SKU",
@@ -47,8 +68,8 @@ class ProductoForm(forms.ModelForm):
             "descripcion": "Descripción",
             "stock": "Stock / Cantidad",
             "categoria": "Categoría",
+            "proveedor": "Proveedor",  # NUEVO
         }
-
 
 class FiltroInventarioForm(forms.Form):
     busqueda = forms.CharField(

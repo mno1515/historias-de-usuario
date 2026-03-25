@@ -1,23 +1,14 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.db.models import Q
-from .models import Producto, Categoria
-from .forms import ProductoForm, CategoriaForm, FiltroInventarioForm
+from .models import Producto, Categoria, Proveedor
+from .forms import ProductoForm, CategoriaForm, FiltroInventarioForm, ProveedorForm
 
 
 def inventario(request):
-    """
-    Vista única que maneja toda la lógica del inventario:
-    - Lista con búsqueda y filtrado
-    - Crear / Editar / Eliminar Producto  (desde modales)
-    - Crear / Editar / Eliminar Categoría (desde modales)
-    """
     form_filtro = FiltroInventarioForm(request.GET or None)
     form_modal_errors = False
 
-    # ──────────────────────────────────────────
-    # POST: despachar por acción
-    # ──────────────────────────────────────────
     if request.method == "POST":
         accion = request.POST.get("accion", "")
 
@@ -87,11 +78,41 @@ def inventario(request):
             messages.success(request, f'Categoría "{nombre}" eliminada.')
             return redirect("inventario:inventario")
 
-    # ──────────────────────────────────────────
-    # GET: lista con filtros
-    # ──────────────────────────────────────────
-    productos = Producto.objects.select_related("categoria").all()
+        # ── PROVEEDOR: crear ──
+        elif accion == "crear_proveedor":
+            form_prov = ProveedorForm(request.POST)
+            if form_prov.is_valid():
+                p = form_prov.save()
+                messages.success(request, f'Proveedor "{p.nombre}" creado correctamente.')
+            else:
+                messages.error(request, "Error al guardar el proveedor. Revisa los campos.")
+            return redirect("inventario:inventario")
+
+        # ── PROVEEDOR: editar ──
+        elif accion == "editar_proveedor":
+            pk = request.POST.get("proveedor_id")
+            proveedor = get_object_or_404(Proveedor, pk=pk)
+            form_prov = ProveedorForm(request.POST, instance=proveedor)
+            if form_prov.is_valid():
+                form_prov.save()
+                messages.success(request, f'Proveedor "{proveedor.nombre}" actualizado.')
+            else:
+                messages.error(request, "Error al actualizar el proveedor.")
+            return redirect("inventario:inventario")
+
+        # ── PROVEEDOR: eliminar ──
+        elif accion == "eliminar_proveedor":
+            pk = request.POST.get("proveedor_id")
+            proveedor = get_object_or_404(Proveedor, pk=pk)
+            nombre = proveedor.nombre
+            proveedor.delete()
+            messages.success(request, f'Proveedor "{nombre}" eliminado.')
+            return redirect("inventario:inventario")
+
+    # ── GET: lista con filtros ──
+    productos = Producto.objects.select_related("categoria", "proveedor").all()
     categorias = Categoria.objects.prefetch_related("productos").all()
+    proveedores = Proveedor.objects.all()
 
     if form_filtro.is_valid():
         busqueda = form_filtro.cleaned_data.get("busqueda")
@@ -103,11 +124,11 @@ def inventario(request):
         if categoria:
             productos = productos.filter(categoria=categoria)
 
-    context = {
+    return render(request, "inventario.html", {
         "productos": productos,
         "categorias": categorias,
+        "proveedores": proveedores,
         "form_filtro": form_filtro,
         "form_modal_errors": form_modal_errors,
         "total": productos.count(),
-    }
-    return render(request, "inventario.html", context)
+    })
